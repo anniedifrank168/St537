@@ -1,0 +1,82 @@
+---
+title: "St537_HW1"
+output: html_document
+date: "2025-01-15"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Problem 1 
+
+Part 1: Defining data
+```{r}
+#define mean vector for our data (mu = E(X), our random vector)
+mu <- c(4,3,2,1)
+mu
+
+#define the variance-covariance matrix, which quantifies the variability of the random vector
+sigma <- matrix(c(2,0,2,1,
+                0,1,1,0,
+                2,1,8,-2,
+                1,0,-2,3),
+                nrow=4, byrow = TRUE)
+sigma
+
+#define the matrix A, the coefficient matrix / transformation matrix 
+A <- matrix(c(1,2,0,0,
+              2,1,0,0,
+              0,0,1,-2,
+              0,0,2,-1),
+            nrow=4, byrow = TRUE)
+A
+```
+
+Part 2: Answering a-d 
+
+(a) Find E(X) and E(AX)
+```{r}
+#E(X) is simply mu. It summarizes the central tendancy of X. 
+E_X <- mu
+E_X
+
+#E(AX) is computed as A*mu, using matrix multiplication (inner product). E(AX) is the expected value of a transformed random vector AX (X is transformed by matrix A)
+E_AX <- A %*% mu
+E_AX
+
+```
+As A is a 4x4 matrix and mu is a 4x1 matrix, we see the expected dimensions of 4x1.
+
+(b) Find cov(AX)
+The covariance of AX Is computed as: cov(AX)=AΣA^T (where sigma is the cov(X), the variance-covariance matrix of X). This matrix will show how the transformation matrix A affects the variability structure of X.
+We know that E(AX)=A⋅E(X), allowing us to use this simplified cov(AX) equation. 
+```{r}
+cov_AX <- A %*% sigma %*% t(A)
+cov_AX
+
+```
+(c) Suppose we have a random sample of size n = 10 from a distribution with mean vector μ, and the variance-covariance matrix Σ as given above. Find the variance-covariance matrix of the sample mean vector.
+
+The variance-covariance matrix of the sample mean vector is: cov(Xbar)= Σ/n. This quantifies the variability and relationships between the components of the sample mean. As n increases, cov(Xbar) decreases, as larger samples lead to more precise estimates of the population mean. It tells us how reliable the sample mean vector Xbar is as an estimator of the true mean vector mu. 
+```{r}
+n= 10
+cov_sample_mean <- sigma/n
+cov_sample_mean
+```
+(d) Suppose now that X follows a multivariate normal distribution with mean vector μ, and the variance- covariance matrix Σ, as given above. Find the distribution of the sample mean vector.
+
+If X follows a multivar normal distribution, then the sample mean vector also does. so the mean of Xbar is just mu. The variance-covariance matrix is scaled down by n. We calculated this in step 4. 
+```{r}
+#mean vector of the sample mean 
+mu
+dist_samplemean_sigma <- cov_sample_mean
+
+#distribution of the sample mean vector:
+mu
+dist_samplemean_sigma
+
+#variance-covariance matrix of the sample mean 
+
+```
+
