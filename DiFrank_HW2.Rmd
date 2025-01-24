@@ -1,0 +1,268 @@
+---
+title: "DiFrank_HW2"
+output:
+  word_document: default
+  html_document: default
+date: "2025-01-22"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Problem 1
+
+Assumptions: The data is drawn from a multivariate normal distribution. Observations are independent and drawn randomly. The s is a good estimate of population covariance matrix.
+
+```{r}
+# Given data
+x_bar <- c(5.936, 2.770, 4.260, 1.326)
+s <- matrix(c(0.40, 0.09, 0.30, 0.05,
+              0.09, 0.10, 0.07, 0.05,
+              0.30, 0.07, 0.30, 0.05,
+              0.05, 0.05, 0.05, 0.08), nrow = 4, byrow = TRUE)
+n <- 50
+
+#Compute variance of (x_bar1 - x_bar2)
+var_diff <- s[1, 1] + s[2, 2] - 2 * s[1, 2]
+
+#Compute T^2
+T_squared <- n * (x_bar[1] - x_bar[2])^2 / var_diff
+
+#Compute critical value
+alpha <- 0.05
+critical_value <- qf(1 - alpha, df1 = 1, df2 = n - 1)
+
+#Output results
+list(T_squared = T_squared, Critical_Value = critical_value, Reject_H0 = T_squared > critical_value)
+```
+
+At alpha = 0.05, we have statistically significant evidence to suggest we reject the null hypothesis that u1 =u2.
+
+## Problem 2 
+
+**Part (a) We test if there is a difference among the mean reaction times across the four treatments.**
+
+#### Hypotheses:
+
+-   Null hypothesis (Ho​): u1=u2=u3=u4, i.e. no overall treatment effect.
+
+-   Alternative hypothesis (Ha): At least one u1​ differs; there is an overall treatment effect.
+
+We assume the data is drawn from a p=variable normal distribution and observations are random and independent; there is no carry-over effect between treatments.
+
+```{r}
+dat <- read.table("data/T6-8.DAT", header = FALSE)
+colnames(dat) <- c("trt1", "trt2", "trt3", "trt4") 
+head(dat)
+```
+
+Perfoming Hotelling's T\^2 hypothesis test:
+
+```{r}
+library(ICSNP)
+mu0=rep(0,ncol(dat))
+HotellingsT2(X=dat,mu=mu0)
+```
+
+According to our test, we have significant evidence (p value \<2.2e-16) to reject the null hypothesis that there is no overall treatment effect (the mean vector is not 0). At least one of the four measures is a non-zero mean difference before and after treatment.
+
+**Part (b) Construct 95% simultaneous CIs for contrasts representing the treatments mean difference u1-u2, u1-u3, and u1-u3. Interpret the results.**
+
+Function for simultaneous CIs:
+
+```{r}
+simul.CI <- function(data, level = 0.95){
+  xbar <- colMeans(data)
+  S<-cov(data)
+  n<-nrow(data)
+  p<-ncol(data)
+  crit<- (n-1)*p/((n-p)*n) * qf(1-level,p,n-p,lower.tail = FALSE)
+  H<-sqrt(crit*diag(S))
+  out<-data.frame(Estimate = xbar, Lower = xbar-H, Upper =xbar+H)
+  return(out)
+}
+```
+
+Doing simultaneous CIs:
+
+```{r}
+sint<- simul.CI(dat)
+round(sint,3)
+```
+
+Because 0 is not included in the confidence intervals, there is strong evidence that the true mean treatment difference is not 0 at 95% confidence.
+
+**Part (c)  Repeat (a) by using a contrast matrix that describes interaction effect, and each of the two main effects.**
+
+We assume there is no carry over affect between the treatments. We assume the data follows a normal distribution and was randomly sampled.
+
+Function for testing multiple contrasts:
+
+```{r}
+T2.contrast<- function(data.matrix, contrast.matrix,alpha = 0.05){
+  Xmat<- data.matrix
+  C<- contrast.matrix
+  n<- nrow(Xmat)
+  q<- nrow(C)
+  xbar<- colMeans(Xmat)
+  S<- cov(Xmat)
+  #intermediate quantities
+  invCSC<- solve(C%*%S %*% (t(C)))
+  Cxbar<- C %*% xbar
+  #test statistic
+  T2<- n*(n-q)/((n-1)*q) * (t(Cxbar)) %*% invCSC %*% (Cxbar)
+  #critical value
+  critical_F = qf(alpha, df1=q,df2=n-q,lower.tail = FALSE)
+  #p value
+  pv<- pf(T2, df1=q, df2=n-q,lower.tail = FALSE)
+  #display results
+  results <- data.frame(T2=T2, Fcritical=critical_F,df1=q,df2=n-q,pvalue=pv)
+  return(results)
+}
+```
+
+Contrast matrix and performing the test:
+
+```{r}
+C<- cbind(c(1,1,1),-diag(1,3))
+C
+#test 
+T2.contrast(dat, C)
+```
+
+There is strong evidence at alpha = 0.05 that the four treatment means are different (i.e. strong evidence to reject the null hypothesis that the 4 means are equal).
+
+## Problem 3 
+
+```{r}
+#reading in data 
+dat3<- read.table("data/T1-8.DAT", header = FALSE)
+colnames(dat3) <- c("DominantRadius", "Radius", "DominantHumerus" ,"Humerous","DominantUlna","Ulna")
+head(dat3)
+```
+
+**Part (a) For each bone, define the difference response between the dominant and non-dominant side. If the true mean difference is zero, it means that the mean mineral content is the same for dominant and non-dominant bones. We are interesting in formally testing whether the mean difference is different than zero.**
+
+μD​=[μD1​​,μD2​​,μD3​​] is the vector of mean differences (Di for the three bones)
+
+Null hypothesis: Ho: μD = 0 (the mean differences are all zero across bones)
+
+Alternative hypothesis: Ha: μD /= 0 (at least one mean difference is significantly different from zero)
+
+Test name: Hotelling's T2 Test, where the sample mean vector is Dˉ, the sample covariance matrix S of the differences.
+
+**Part (b) Performance of the test**
+
+```{r}
+mu0=rep(0,ncol(dat3))
+HotellingsT2(X=dat3,mu=mu0)
+```
+
+At alpha=0.05, there is statistically significant evidence to reject the null (i.e. the true mean difference is not equal to 0).
+
+**Part (c) Bonferroni 95% intervals for each component of the difference of the two mean vectors**
+
+```{r}
+#differences
+diff_rad <- dat3$DominantRadius - dat3$Radius
+diff_hum <- dat3$DominantHumerus - dat3$Humerous
+diff_ulna <- dat3$DominantUlna - dat3$Ulna
+
+#mean differences
+mean_diff_rad <- mean(diff_rad)
+mean_diff_hum <- mean(diff_hum)
+mean_diff_ulna <- mean(diff_ulna)
+
+#standard errors
+se_rad <- sd(diff_rad) / sqrt(length(diff_rad))
+se_hum <- sd(diff_hum) / sqrt(length(diff_hum))
+se_ulna <- sd(diff_ulna) / sqrt(length(diff_ulna))
+
+#bonferroni adjustment
+alpha = 0.05
+k <- 3 #number of tests
+adjusted_alpha <- alpha / k
+t_critical <- qt(1 - adjusted_alpha / 2, df = length(diff_rad) - 1)
+
+#CIs 
+ci_rad <- c(
+    mean_diff_rad - t_critical * se_rad,
+  mean_diff_rad + t_critical * se_rad
+)
+
+ci_hum <- c(
+    mean_diff_hum - t_critical * se_hum,
+  mean_diff_hum + t_critical * se_hum
+)
+
+ci_ulna <- c(
+    mean_diff_ulna - t_critical * se_ulna,
+  mean_diff_ulna + t_critical * se_ulna
+)
+
+#results 
+cat("Bonferroni 95% Confidence Intervals:\n")
+cat("Radius:", ci_rad, "\n")
+cat("Humerus:", ci_hum, "\n")
+cat("Ulna:", ci_ulna, "\n")
+```
+
+For the radius, ulna, and humerus, the intervals include zero, indicating there is not statistically significant evidence to reject a null of zero difference between dominant and non-dominant mineral content.
+
+## Problem 4 
+
+```{r}
+#reading in data 
+dat4<- read.table(file="data/middleschool.txt", sep=",",header=TRUE)
+colnames(dat4)
+head(dat4)
+```
+
+**Part (a) Construct Bonferroni intervals for the mean performance in each of the four subjects, MATH, ELA, Science and Social studies, for school A.**
+
+```{r}
+#Filter data for School A and School B
+school_A <- dat4[dat4$school == "A", ]
+school_B <- dat4[dat4$school == "B", ]
+
+#Function to calculate Bonferroni intervals
+bonferroni_intervals <- function(data, subjects, alpha = 0.05) {
+  k <- length(subjects)  # Number of comparisons
+  adjusted_alpha <- alpha / k
+  t_critical <- qt(1 - adjusted_alpha / 2, df = nrow(data) - 1)
+  
+  results <- data.frame(
+    Subject = subjects,
+    Mean = sapply(subjects, function(subj) mean(data[[subj]], na.rm = TRUE)),
+    Lower = NA,
+    Upper = NA
+  )
+  
+  results$SE <- sapply(subjects, function(subj) {
+    sd(data[[subj]], na.rm = TRUE) / sqrt(nrow(data))
+  })
+  
+  results$Lower <- results$Mean - t_critical * results$SE
+  results$Upper <- results$Mean + t_critical * results$SE
+  return(results)
+}
+
+# Subjects to analyze
+subjects <- c("Math", "ELA", "Science", "SocialStudies")
+
+# Bonferroni intervals for School A
+bonferroni_A <- bonferroni_intervals(school_A, subjects)
+bonferroni_A
+```
+
+**Part (b) Repeat (a) for school B.**
+
+```{r}
+bonferroni_B <- bonferroni_intervals(school_B, subjects)
+bonferroni_B
+```
+
+**Part (c) Use (a) and (b) and comment on whether any school has better performance in any subject.**
+
+For Math, ELA, Science, and Social Studies, the confidence intervals between each school overlap, so I wouldn't make any strong conclusions on the differences between schools. Even though the mean is lower in each subject for school A, we are using 95% confidence, and our 95% confidence interval for each of these subjects in A contains the mean for school B.

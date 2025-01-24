@@ -1,0 +1,76 @@
+---
+title: "in class"
+output: html_document
+date: "2025-01-16"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 01-16-25
+
+## Standard normal distributions
+
+Verifying- example with in class R commands
+
+```{r}
+#default is standard normal if you dont specify mean and sd
+qnorm(0.025)
+qnorm(0.975)
+```
+
+As shown, within 2 sd of the mean we should observe around 95% of the data (0.025-0.975)
+
+# 01/21/25
+
+```{r}
+#install.packages("ICSNP")
+library("ICSNP")
+
+data("LASERI")
+head(LASERI)
+#we want to compare different indicators- cardiac output before and after tilt therapy
+#focusing on 4 different measures for this - 
+laseri <- LASERI[,25:28]
+
+#looking at pair plot will show how these four variables relate to eachother
+pairs(laseri)
+
+```
+
+what is the true mean difference between the pre and post tilt for each of the four measures of differences? can we formally assess whether there is a change between pre and post for all these measures? is the tilting experiment having a healthy impact?
+
+```{r}
+
+```
+
+## 1/23/25
+
+univariate hyp test- manual way-
+
+```{r}
+mu0 <- 0 #null value 
+
+n<- nrow(LASERI)
+alpha <- 0.05
+
+#t crit value using built in r function 
+z.crit <- qnorm(p=alpha/2,lower.tail=F)
+
+xbar =mean(laseri$HRT1T4)
+stddev = sd(laseri$HRT1T4)
+test.stat <- (xbar-mu0)/(stddev/sqrt(n))
+pval<- 2*pnorm(abs(test.stat),lower.tail = FALSE)
+pval #significant 
+```
+
+built in t test function -
+
+```{r}
+t.test(laseri$HRT1T4)
+```
+
+-   note if the df (n-1) wasnt large enough, you would need to check normality. here it is large enough
+
+-   note 95% CIs are given automatically here as well
