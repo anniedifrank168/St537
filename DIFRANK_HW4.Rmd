@@ -1,0 +1,276 @@
+---
+title: "DiFrank_HW4"
+output: html_document
+date: "2025-02-25"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Problem 1
+
+```{r}
+library(psych)
+
+cor_matrix_1 <- matrix(c(
+  1.00, 0.44, 0.41, 0.29, 0.33, 0.25,
+  0.44, 1.00, 0.35, 0.35, 0.32, 0.33,
+  0.41, 0.35, 1.00, 0.16, 0.19, 0.18,
+  0.29, 0.35, 0.16, 1.00, 0.59, 0.47,
+  0.33, 0.32, 0.19, 0.59, 1.00, 0.46,
+  0.25, 0.33, 0.18, 0.47, 0.46, 1.00
+), nrow = 6, byrow = TRUE)
+
+colnames(cor_matrix_1) <- rownames(cor_matrix_1) <- c("French", "English", "History", "Arithmetic", "Algebra", "Geometry")
+
+#visualizing the correlation matrix 
+library(corrplot)
+corrplot(cor(cor_matrix_1), order = "hclust")
+```
+
+Here we see some grouping between the three math classes and the three non-math classes.
+
+```{r}
+#perform factor analysis using MLE
+output_1 <- fa(cor_matrix_1, nfactors = 2, fm= "ml", rotate = "none")
+
+#factor loadings 
+print(output_1$loadings)
+```
+
+It looks like Arithmetic and Algebra are the strongest loadings for the first factor, so it is a math specific component. In the second factor the three maths have negative loadings while the three others have positive loadings, suggesting again the component has to do with the difference between math and non-math classes, but the loadings aren't very strong.
+
+```{r}
+print(output_1$Vaccounted)
+```
+
+This shows that only 0.47% of the variance is explained by the two factors, so this probably isn't a sufficient number of factors to explain the variance in the data.
+
+```{r}
+#assess communalities
+print(output_1$communality)
+```
+
+As the variables are scaled/have variance 1, if the two factor model was a good fit to the data we would expect communalities for each variable to be close to 1, but they are not. For example, for french, only 0.49/1 of the variance of french is captured by the common factor. Thus around half of the variance is the specific variance of french that was not captured.
+
+```{r}
+#assess uniqueness
+print(output_1$uniquenesses)
+```
+
+Because the number for each class type is pretty large, this says that the latent factors don't contribute much to explaining this variability, and again support that 2 factors isn't sufficient.
+
+```{r}
+#exploring a rotation - varimax 
+out_1_varimax <- fa(cor_matrix_1, nfactors = 2, fm = "ml", rotate = "varimax", scores = "regression")
+#factor loadings 
+print(out_1_varimax$loadings)
+```
+
+This model does not explain any more variance than the previous model with no rotation.
+
+```{r}
+#factor scores 
+out_1_varimax$scores
+```
+
+Factor scores can not be computed, they can only be computed when the model is identified and sufficient data is provided.
+
+```{r}
+#exploring a rotation- oblimin
+out_1_oblimin <- fa(cor_matrix_1, nfactors = 2, fm = "ml", rotate = "oblimin", scores = "regression")
+
+#factor loadings 
+print(out_1_oblimin$loadings)
+```
+
+This model also doesn't do any better, so factor analysis probably isn't the way to go for this data.
+
+```{r}
+out_1_oblimin$scores
+```
+
+No factor scores could be computed.
+
+## Problem 2 
+
+```{r}
+#install.packages("lavaan")
+#install.packages("sem")
+library(lavaan)
+library(sem)
+lt <- sem::readMoments("data/EverittEx7.1.txt", diag = T) 
+R <- (lt + t(lt)) - diag(1, 9)
+R2 <- R[-9, -9]
+R2
+
+
+obj<-"doctor      > X1, lambda11, NA
+doctor      -> X3, lambda31, NA
+doctor      -> X4, lambda41, NA
+doctor      -> X8, lambda81, NA
+patient     -> X2, lambda22, NA
+patient     -> X5, lambda52, NA
+patient     -> X6, lambda62, NA
+patient     -> X7, lambda72, NA
+## Specification of Aspiration factor
+X1         <-> X1, psi1, NA
+X2         <-> X2, psi2, NA
+X3         <-> X3, psi3, NA
+X4         <-> X4, psi4, NA
+X5         <-> X5, psi5, NA
+X6         <-> X6, psi6, NA
+X7         <-> X7, psi7, NA
+X8         <-> X8, psi8, NA
+## Fixed variances for the two factors
+doctor     <-> doctor, NA, 1
+patient    <-> patient, NA, 1
+## Correlation between two factors
+doctor     <-> patient, rho, NA "
+
+model<- specifyModel(text = "
+##Specify doctor
+doctor -> X1, lambda1, NA
+doctor -> X3, lambda3, NA
+doctor -> X4, lambda4, NA
+doctor -> X8, lambda8, NA
+##patient
+patient -> X2, lambda2, NA
+patient -> X5, lambda5, NA
+patient -> X6, lambda6, NA
+patient -> X7, lambda7, NA
+## Specification of Aspiration factor
+X1 <-> X1, psi1, NA
+X2 <-> X2, psi2, NA
+X3 <-> X3, psi3, NA
+X4 <-> X4, psi4, NA
+X5 <-> X5, psi5, NA
+X6 <-> X6, psi6, NA
+X7 <-> X7, psi7, NA
+X8 <-> X8, psi8, NA
+## Fixed variances for the two factors
+doctor <-> doctor, NA, 1
+patient <-> patient, NA, 1
+## Correlation between two factors
+doctor <-> patient, rho, NA")
+model
+
+# Fit the model 
+respons_sem <- sem(model = model, 
+                   S = R2,
+                   N = 123,
+                   debug=TRUE
+                   )
+
+#lavaan syntax
+model2 <- (text = '
+#latent vars 
+Doctor_resp =~ X1 + X3 + X4 + X8
+Patient_resp =~ X2 + X5 + X6 + X7
+#Corr between latent factors 
+Doctor_resp ~~ phi*Patient_resp
+')
+model2
+
+fit_2 <- sem(model = model2, 
+             sample.cov = R2,
+                   sample.nobs = 123,
+                   debug=TRUE
+                   )
+
+# Summary of results
+summary(fit_2)
+
+#model fit results
+#summary(fit, fit.measures = TRUE)
+```
+
+```{r}
+#Confidence interval 
+#extract parameter estimates
+param_est <- parameterEstimates(fit)
+
+#find the correlation between the two latent variables
+cor_param <- param_est[param_est$lhs == "DoctorResponsibility" & param_est$rhs == "PatientResponsibility",]
+
+cor_param$ci.lower
+cor_param$ci.upper
+
+```
+
+[-0.1937633, -0.01992721] represents the 95% confidence interval for the correlation between the two latent variables (Doctor's Responsibility and Patient's Responsibility). Based on the model and data, we are 95% confident that the true correlation between doctor's responsibility and patient's responsibility lies between -0.19 and -0.02. As one latent variable increases the other tends to decrease, however the correlation is extremely small. Nevertheless because the interval doesn't contain zero we can conclude the correlation is significant at this confidence level, suggesting a negative association between the two variables.
+
+## Problem 4 
+
+(a) Sensitivity = 23/25 = 0.92 is the proportion of actual positives that are correctly identified.
+
+Specificity = 18/21 = 0.86 is the proportion of actual negatives that are correctly identified.
+
+(b) The most frequent class is True 1. 25/46 = 0.54
+
+(c) Error rate = 3+2/46 = 0.11
+
+Accuracy = 23+18/46 = 0.89
+
+## Bonus Problem 1 
+
+(a)
+
+```{r}
+#linear predictor 
+z = -6+2 +3.5 
+print(paste("linear predictor =",z))
+#logistic function with approximating e^-0.5 = 0.6065
+p = 0.6065 / (1+0.6065)
+print(paste("p =",p))
+```
+
+The probability that a student who studies for 40 hours and has a GPA of 3.5 gets an A is 0.377.
+
+(b)
+
+`-6 + (0.05x1) + (1 * 3.5) =0`
+
+`x1 = (2.5/0.05)`
+
+`x1 = 50`
+
+The student needs to study 50 hours to have a 50% chance on getting an A.
+
+(c)
+
+`P= 0.37 / (1+0.37) = 0.27`
+
+On average 27% of students with odds of 0.37 will receive an A.
+
+## Bonus Problem 2
+
+This problem can be solved using Bayes' theorem.
+
+P(Dividend∣X=4) = P(X=4∣dividend)*P(Dividend) /                             P(X=4)
+Where p(x=4|dividend) is the likelihood of x=4 given the company issues a dividend, p(dividend) is the prior probability, 0.80, and p(x=4) iis the total probability of x=4 (two possible outcomes being yes and no)
+```{r}
+#given data
+mu_div = 10
+mu_no_div = 0
+sigma = 6
+x = 4
+p_div = 0.8
+p_no_div = 0.2 
+
+#P(X=4|div)
+p_x_given_dividend <- (1 / sqrt(2 * pi * sigma^2)) * exp(-((x - mu_div)^2) / (2 * sigma^2))
+
+#P(X= 4|No div)
+p_x_given_no_dividend <- (1 / sqrt(2 * pi * sigma^2)) * exp(-((x - mu_no_div)^2) / (2 * sigma^2))
+
+#P(X=4) = P(X =4|div) * P(div) + P(X=4 |No div) * P(No div)
+p_x <- p_x_given_dividend * p_div + p_x_given_no_dividend * p_no_div
+
+#P(div|X =4) using Bayes' theorem
+p_dividend_given_x <- (p_x_given_dividend * p_div) / p_x
+
+print(paste("The probability that a company will issue a dividend this year, given that its percentage profit was x=4 last year, is", p_dividend_given_x))
+```
+

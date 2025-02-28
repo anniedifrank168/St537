@@ -39,7 +39,7 @@ list(T_squared = T_squared, Critical_Value = critical_value, Reject_H0 = T_squar
 
 At alpha = 0.05, we have statistically significant evidence to suggest we reject the null hypothesis that u1 =u2.
 
-## Problem 2 
+## Problem 2
 
 **Part (a) We test if there is a difference among the mean reaction times across the four treatments.**
 
@@ -133,7 +133,7 @@ T2.contrast(dat, C)
 
 There is strong evidence at alpha = 0.05 that the four treatment means are different (i.e. strong evidence to reject the null hypothesis that the 4 means are equal).
 
-## Problem 3 
+## Problem 3
 
 ```{r}
 #reading in data 
@@ -210,7 +210,7 @@ cat("Ulna:", ci_ulna, "\n")
 
 For the radius, ulna, and humerus, the intervals include zero, indicating there is not statistically significant evidence to reject a null of zero difference between dominant and non-dominant mineral content.
 
-## Problem 4 
+## Problem 4
 
 ```{r}
 #reading in data 

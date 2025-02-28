@@ -74,3 +74,85 @@ t.test(laseri$HRT1T4)
 -   note if the df (n-1) wasnt large enough, you would need to check normality. here it is large enough
 
 -   note 95% CIs are given automatically here as well
+
+# 2/27/25
+
+HW4- question 3 on LDA analysis work already done on it:
+
+```{r}
+firms <- read.table("data/T11-4.DAT", header = FALSE)
+colnames(firms) <- c( paste0("X", 1:4), "status")
+#head(firms)
+
+#install.packages("MASS")
+library(MASS)
+
+# Load necessary library
+library(MASS)
+
+# Assuming you have the dataset 'firms' as a data frame
+# Fit the LDA model
+lda_model <- lda(status ~ X1 + X2 + X3 + X4, data = firms)
+
+#coefficients (a) and the intercept (b)
+lda_model$coefficients
+lda_model$prior  #priors
+lda_model$means  #means of each class
+
+# The coefficients correspond to 'a'
+# The threshold value 'b' is the intercept for each class
+```
+
+(a) a is 0.457 and b is 0.543
+
+(b) confusion matrix and APER
+
+```{r}
+predictions <- predict(lda_model)$class
+
+#confusion matrix
+conf_matrix <- table(Predicted = predictions, Actual = firms$status)
+
+print(conf_matrix)
+
+#compute APER
+incorrect_classifications <- sum(predictions != firms$status)
+total_classifications <- length(firms$status)
+
+aper <- incorrect_classifications / total_classifications
+print(paste("APER:", aper))
+```
+
+(c) Potential problems are overfitting because the CM is computed on the training data itself, thus it might not be generalizable to unseen data. It also might be a biased estimate due to using the entire dataset for training and evaluation leading to an over optimistic estimate of performance.
+
+```{r}
+set.seed(123)
+
+#split the dataset into training (70%) and test (30%) sets
+train_index <- sample(1:nrow(firms), size = 0.7 * nrow(firms))
+train_data <- firms[train_index, ]
+test_data <- firms[-train_index, ]
+
+#fit the LDA model on the training set
+lda_model_train <- lda(status ~ X1 + X2 + X3 + X4, data = train_data)
+
+#predict on the test set
+predictions_test <- predict(lda_model_train, newdata = test_data)$class
+
+#create the confusion matrix for the test set
+conf_matrix_test <- table(Predicted = predictions_test, Actual = test_data$status)
+print(conf_matrix_test)
+
+#compute the error rate on the test set
+incorrect_classifications_test <- sum(predictions_test != test_data$status)
+total_classifications_test <- length(test_data$status)
+
+#error rate (1 - accuracy)
+error_rate_test <- incorrect_classifications_test / total_classifications_test
+print(paste("Error Rate (Hold-Out Method):", error_rate_test))
+
+```
+
+This rate is slightly higher than the original rate, but is likely more accurate because it does not have overfitting bias.
+
+(d) ----------------------- NOT DONE YET

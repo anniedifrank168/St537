@@ -1,0 +1,261 @@
+---
+title: "HW3"
+output:
+  word_document: default
+  html_document: default
+date: "2025-02-11"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Problem 1
+
+```{r}
+dat<-read.table(file="data/middleschool.txt", sep=",", header=TRUE)
+colnames(dat)
+head(dat)
+```
+
+(a) test: Hotelling's T2 Test
+
+    design: two sample
+
+(b) Performing the test
+
+Assumptions: both populations are multivariate normal, both have the same variance-covariance matrix, and the two samples are mutually independant.
+
+```{r}
+library(ICSNP)
+library(dplyr)
+#Filter data for School A and School B
+school_A <- dat[dat$school == "A", ]
+school_B <- dat[dat$school == "B", ]
+school_A <- school_A %>% select("Math","ELA","Science","SocialStudies")
+school_B <- school_B %>% select("Math","ELA","Science","SocialStudies")
+#we have large N for both samples (100 and 150), so can assume normality 
+
+HotellingsT2(as.matrix(school_A),as.matrix(school_B))
+
+
+```
+
+(c) The p-value tells us how likely it is to see a difference as larger or larger than the observed one if the two schools actually performed the same. The alternative test checks whether the overall performance difference across subjects is significantly different from zero. Since the p-value (0.72) is much greater than the standard 0.05, we fail to reject the null hypothesis. There is not statistically significant evidence that one school performed significantly better than the other overall (across the four classes). Based on the data, the two school appear to have similar academic performance. This result agrees with my findings in HW2, where the bon ferroni confidence interval for each subject between schools overlapped, which was not suggestive of any significant difference between the schools in each subject.
+
+## Problem 2
+
+```{r}
+library(car)
+#head(Pottery)
+```
+
+```{r}
+dat2<- as.matrix(Pottery[,-1])
+site <- Pottery[,1]
+#table(site)
+```
+
+(a) Mathematical hypothesis to test and perform an appropriate hypothesis test:
+
+> H0:μ1=μ=μ3=μ4
+>
+> HA: At least one site's mean composition is different
+>
+> Where μi represents the mean vector of chemical compositions for the ith site.
+>
+> Test: MANOVA, as we are dealing with multiple dependent variables across different groups.
+
+```{r}
+site <- as.factor(site)
+
+out<- manova(dat2~site)
+
+#view results
+summary(out, test = "Wilks")
+```
+
+Because the p value is less than 0.05, we reject Ho meaning at least one site has significantly different mean chemical composition.
+
+(b) Investigating which components are different using pair-wise comparisons
+
+```{r}
+library(emmeans)
+#mean of each variable 
+Almeans<- emmeans(out, "site", weights=c(1,0,0,0,0))
+Almeans
+Femeans<- emmeans(out, "site", weights=c(0,1,0,0,0))
+Mgmeans<- emmeans(out, "site", weights=c(0,0,1,0,0))
+Cameans<- emmeans(out, "site", weights=c(0,0,0,1,0))
+Nameans<- emmeans(out, "site", weights=c(0,0,0,0,1))
+
+#adjust alpha accordingly due to multiple comparisons 
+p<- 5 #number of variables 
+g<- 4 #number of groups 
+alpha.old <- 0.05
+#number of comparison 
+nc <- p*g*(g-1)/2
+#new significance level 
+alpha.new <- alpha.old/nc
+
+```
+
+Obtain the contrasts:
+
+```{r}
+Alcont <- contrast(Almeans, "pairwise")
+Fecont <- contrast(Femeans, "pairwise")
+Mgcont <- contrast(Mgmeans, "pairwise")
+Cacont <- contrast(Cameans, "pairwise")
+Nacont <- contrast(Nameans, "pairwise")
+```
+
+Pairwise differences for Al
+
+```{r}
+al_pw <- confint(Alcont, level = 1-alpha.new, adj="none")
+al_pw
+```
+
+There are significant differences in Aluminum content between AshleyRails (AR) and Caldicot, AR and Llanedyrn, and IsleThorns (IT) and Llanedyrn.
+
+Pairwise differences for Fe
+
+```{r}
+fe_pw <- confint(Fecont, level = 1-alpha.new, adj="none")
+fe_pw
+```
+
+There are significant difference in Iron content between AR and Caldicot, AR and LLanedyrn, Caldicot and IT, and IT and Llanedyrn.
+
+Pairwise differences for Mg
+
+```{r}
+mg_pw <- confint(Mgcont, level = 1-alpha.new, adj="none")
+mg_pw
+```
+
+There are significant differences in magnesium content between AR and IT, AR and Llanedyrn, Caldicot and IT, and IT and Llanedyrn.
+
+Pairwise differences for Ca
+
+```{r}
+ca_pw <- confint(Cacont, level = 1-alpha.new, adj="none")
+ca_pw
+```
+
+There are significant differences in Cadmium content between AR and Caldicot, AR and Llanedyrn, Caldicot and IT, and IT and Llanedyrn.
+
+Pairwise differences for Na
+
+```{r}
+na_pw <- confint(Nacont, level = 1-alpha.new, adj="none")
+na_pw
+```
+
+There are significant differences in sodium content between AR and Llanedyrn and IT and Llanedyrn.
+
+(c) The assumptions are that when comparing group means the covariance matrices of any two different populations are equal, each population is multivariate normal, and the samples are mutually independent.
+
+## Problem 3 
+
+```{r}
+dat3<- read.table("data/T6-17.dat", header=F)
+colnames(dat3) <- c("Location","Variety","Yield","SdMatKer","Size")
+#dat3
+
+dat3$Location = as.factor(dat3$Location)
+dat3$Variety = as.factor(dat3$Variety)
+```
+
+(a) Performing MANOVA\
+Testing for a location-variety interaction effect, location effect, and variety effect
+
+```{r}
+ corn <- as.matrix(dat3[,3:5])
+ location <- dat3$Location
+ variety <- dat3$Variety
+ 
+ #First, will test for the interaction effect. 
+ loc_var_int <- lm(corn ~ location * variety)
+ fitcorn <- manova(loc_var_int)
+ summary(fitcorn, test="Wilks")
+```
+
+Here we see that (just barely) there is no evidence of an interaction effect, but main effects of both factors are significant.
+
+Looking at the additive model (main effects of location and variety):
+
+```{r}
+corn_add <- lm(corn ~ location + variety)
+fitaddcorn <- manova(corn_add)
+summary(fitaddcorn,test = "Wilks")
+```
+
+Both factor effects have significant (\<0.05) p values, indicating that the response mean differs among the various groups.
+
+(b) Investigating whether the interaction shows up for some variables but not others by running three univariate ANOVA models
+
+```{r}
+summary.aov(loc_var_int)
+```
+
+The interaction between location and variety is significant for the Yield and SdMatKer variables, but not for the Size variable.
+
+(c) The effect of the variety variable (The level of the variety factor) on the outcome (peanut measurements) depends on the value of the location variable (location of peanut), and vice versa. With this significant interaction, you can't interpret the effects of each variable seperately because they influence eachother. For example, If location is = 1, whether variety is = 6 or 8 will lead to a different effect on the response variable(s).
+
+## Problem 4 
+
+```{r}
+library(datasets)
+Harman23.cor$cov
+```
+
+(a) Plot to visualize the correlation matrix
+
+```{r}
+pairs(Harman23.cor$cov, pch=5, col="red")
+corr_data <- Harman23.cor$cov
+```
+
+There are general positive correlations between height/length-related measurements (height, arm span, forearm, lower leg). There seems to be slightly negative correlations between length related measurements and weight/bitro/chest related measurements. There are mildly positive correlations between the weight variable and chest and bistro measurements, but they don't seem to be as strong as the positive relationships between the height/length measurements.
+
+(b) Performing PCA
+
+```{r}
+#Checking if we need to scale the variables due to differences in scales/variances
+round(apply(corr_data,2,sd),3)
+```
+
+All the standard deviations are generally similar. They are all human body measurements, so the scales aren't super different.
+
+```{r}
+data_pca <- prcomp(corr_data)
+summary(data_pca)
+```
+
+0.8528 of the variance is captured by the first PC and 0.05987 of the variance is captured by the second PC. Together, these capture 0.91267 of the variance.
+
+(c) Retaining the first two PCs and interpreting their loadings in the context of the problem
+
+```{r}
+round(data_pca$rotation[,1:2],3)
+```
+
+The first PC can be constructed as
+
+*Y1 = -0.377(height) -0.423(arm.span) - 0.432(forearm) -0.391(lower.leg) + 0.283(weight) + 0.301(bitro.diameter) + 0.346(chest.girth) + 0.222(chest.width)*
+
+There are strong negative loadings for height-related variables and positive loadings for weight-related variabnles. It looks like this can be interpreted as a contrast between the height and weight traits. Individuals with higher values for height-related traits will have lower PC1 scores, and vice versa.
+
+This represents a body size distinction between taller and leaner individuals (negative PC1 scores) versus broader and heavier individuals (positive PC1 scores).
+
+The second PC can be constructed as
+
+*Y2= 0.163(height) -0.084(arm.span) + 0.017(forearm) +0.177(lower.leg) + 0.305(weight) + 0.195(bitro.diameter) + 0.397(chest.girth) - 0.805(chest.width)*
+
+The PC has more moderate positive loadings for weight-related variables, but chest width has a very strong negative loading. We also see small positive loadings for some height-related variables.
+
+This suggests that PC2 differentiates individuals based on body proportions rather than overall size. Higher PC2 indicates larger chest girth and weight, lower indicates wider chest width but lower values for weight-related traits.
+
+This represents a body shape distinction, contrasting people with wide chests but lower weight (negative PC2 scores) to those with larger chest girth and overall weight (positive PC2 scores).
